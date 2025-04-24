@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "1448192685",
+    "firebase_url": "https://project-1-46071-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "project-1-46071",
+    "storage_bucket": "project-1-46071.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1448192685:android:eb6a47f117c20510c33424",
+        "android_client_info": {
+          "package_name": "com.example.barberbud_rider_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNAh3ttd8w00Emw5AYbUx7Yal0CIg8_AU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1448192685:android:3db21454807e6d32c33424",
+        "android_client_info": {
+          "package_name": "com.example.final_year_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNAh3ttd8w00Emw5AYbUx7Yal0CIg8_AU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
