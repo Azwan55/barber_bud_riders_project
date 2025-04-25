@@ -2,6 +2,7 @@ import 'package:barberbud_rider_project/resources/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 
 class HomePageBody extends StatefulWidget {
   const HomePageBody({super.key});
@@ -17,7 +18,17 @@ class _HomePageBodyState extends State<HomePageBody> {
   @override
   void initState() {
     super.initState();
+    _checkLocationPermission();
   }
+
+
+Future<void> _checkLocationPermission() async {
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied ||
+      permission == LocationPermission.deniedForever) {
+    permission = await Geolocator.requestPermission();
+  }
+}
 
   // Function to launch Google Maps
   void _launchMaps(double latitude, double longitude) async {
@@ -49,7 +60,9 @@ class _HomePageBodyState extends State<HomePageBody> {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No orders yet", style: TextStyle(color: SecondaryColor)));
+          return const Center(
+              child: Text("No orders yet",
+                  style: TextStyle(color: SecondaryColor)));
         }
 
         final allOrders = snapshot.data!.docs.map((doc) {
@@ -149,7 +162,27 @@ class _HomePageBodyState extends State<HomePageBody> {
                   ),
                 ),
               ),
-             onLongPress: (){} ,
+              onLongPress: () async {
+                final orderId = order['id'];
+                final docRef = FirebaseFirestore.instance
+                    .collection('orders')
+                    .doc(orderId);
+
+                await docRef.update({'orderTaken': 'Yes'});
+
+                Geolocator.getPositionStream(
+                  locationSettings: const LocationSettings(
+                    accuracy: LocationAccuracy.high,
+                    distanceFilter: 10,
+                  ),
+                ).listen((Position position) async {
+                  await docRef.update({
+                    'barberLatitude': position.latitude,
+                    'barberLongitude': position.longitude,
+                    'lastUpdated': Timestamp.now(),
+                  });
+                });
+              },
             );
           },
         );
