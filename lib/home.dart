@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
@@ -17,19 +16,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   User? get user => Auth().currentUser;
+  bool showOrders = true;
 
   int index = 0;
-  final screens = [
-    /* 
-                        screens will show which page to go base on index on tapped
-                        bottom navigation bar that link to body screen[index] 
-                           */
-    HomePageBody(),
-    OrderTakenPage(),
-    EwalletPage(),
-    MissionPage(),
-    ProfilePage(),
-  ];
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   final items = <Widget>[
     //Icon widget for bottom navigation bar
@@ -44,12 +38,11 @@ class _HomePageState extends State<HomePage> {
   Widget build(
     BuildContext context,
   ) {
-   
+    
     return Scaffold(
       backgroundColor: PrimaryColor,
       appBar: AppBar(
         backgroundColor: PrimaryColor,
-        
         centerTitle: true,
         title: Text(
           'Barber Bud Rider',
@@ -58,17 +51,51 @@ class _HomePageState extends State<HomePage> {
             fontSize: 20,
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Switch(
+              inactiveTrackColor: SecondaryColor,
+              activeTrackColor: Colors.blueAccent,
+              value: showOrders,
+              activeColor: Colors.white,
+              onChanged: (value) {
+                setState(() {
+                  showOrders = value;
+                });
+              },
+            ),
+          ),
+        ],
       ),
-      body: screens[index],
-      /*
-                              the screen will take index that been put by set state
-                              in bottom navigation bar and dispaly the screen[] base
-                              on its index.
-                            */
-      bottomNavigationBar: Padding(
+
+      /* the screen will take index that been put by set state
+          in bottom navigation bar and dispaly the screen[] base
+           on its index.*/
+      body: IndexedStack( /* indexstack is used to preserve state
+                            of the page even not visible making loading the page more efficient.*/
+        index: index,
+        children: [
+          showOrders
+              ? const HomePageBody()
+              : const Center(
+                  child: Text(
+                    'Start taking order now',
+                    style: TextStyle(fontSize: 22, color: Colors.white),
+                  ),
+                ),
+          OrderTakenPage(),
+          EwalletPage(),
+          MissionPage(),
+          ProfilePage(),
+        ],
+      ),
+
+     // // This is the bottom navigation bar that will be displayed at the bottom of the screen.
+      bottomNavigationBar: Padding(   
         padding: EdgeInsets.only(top: 15),
         child: Theme(
-          //bottom navigation bar
+          
           data: Theme.of(context).copyWith(
             iconTheme: IconThemeData(color: Colors.black),
           ),

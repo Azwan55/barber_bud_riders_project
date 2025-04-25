@@ -1,3 +1,4 @@
+import 'package:barberbud_rider_project/resources/constant.dart';
 import 'package:flutter/material.dart';
 
 class OrderTakenPage extends StatefulWidget {
@@ -11,13 +12,13 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Order Taken'),
-      ),
+      backgroundColor: PrimaryColor,
+      
       body: Center(
+        
         child: Text(
-          'Your order has been taken!',
-          style: TextStyle(fontSize: 24),
+          'Your are not taken any order yet',
+          style: TextStyle(fontSize: 18, color: SecondaryColor),
         ),
       ),
     );

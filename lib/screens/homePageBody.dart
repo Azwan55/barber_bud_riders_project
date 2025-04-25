@@ -30,6 +30,11 @@ class _HomePageBodyState extends State<HomePageBody> {
     }
   }
 
+  // Function to filter orders where orderTaken == "Not yet"
+  List<Map<String, dynamic>> filterOrders(List<Map<String, dynamic>> orders) {
+    return orders.where((order) => order['orderTaken'] == 'Not yet').toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -44,7 +49,7 @@ class _HomePageBodyState extends State<HomePageBody> {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No orders yet"));
+          return const Center(child: Text("No orders yet", style: TextStyle(color: SecondaryColor)));
         }
 
         final allOrders = snapshot.data!.docs.map((doc) {
@@ -52,11 +57,14 @@ class _HomePageBodyState extends State<HomePageBody> {
           return data;
         }).toList();
 
+        // Filter the orders to display only those with orderTaken == "Not yet"
+        final filteredOrders = filterOrders(allOrders);
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: allOrders.length,
+          itemCount: filteredOrders.length,
           itemBuilder: (context, index) {
-            final order = allOrders[index];
+            final order = filteredOrders[index];
             double originalTotal =
                 double.tryParse(order['total']?.toString() ?? '0') ?? 0;
             double deductedTotal = originalTotal;
