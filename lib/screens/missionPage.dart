@@ -1,3 +1,4 @@
+import 'package:barberbud_rider_project/resources/constant.dart';
 import 'package:flutter/material.dart';
 
 class MissionPage extends StatefulWidget {
@@ -11,9 +12,8 @@ class _MissionPageState extends State<MissionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Mission Page'),
-      ),
+      backgroundColor: PrimaryColor,
+    
       body: Center(
         child: Text(
           'This is the mission page!',

@@ -106,6 +106,89 @@ class _ProfilePageState extends State<ProfilePage> {
     await Auth().signOut();
   }
 
+  Future<void> editPhoneNumber() async {
+    String newPhoneNumber = "";
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          'Edit Phone Number',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.white,
+          ),
+        ),
+        content: TextField(
+          cursorColor: Colors.white,
+          autofocus: true,
+          style: TextStyle(
+            color: Colors.white,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Enter new phone number',
+            hintStyle: TextStyle(
+              color: Colors.grey,
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.cyan),
+            ),
+          ),
+          onChanged: (value) {
+            newPhoneNumber = value;
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.white,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(newPhoneNumber),
+            child: Text(
+              'Save',
+              style: TextStyle(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    // Update phone number in Firestore
+    if (newPhoneNumber.trim().isNotEmpty) {
+      try {
+        await userCollection
+            .doc(currentUser.email)
+            .update({'phoneNumber': newPhoneNumber});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green,
+            content: Text(
+              'Phone Number Saved Successfully!',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Error: ${e.toString()}',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -244,7 +327,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                       hintText: 'Enter new password',
                                       hintStyle: TextStyle(color: Colors.grey),
                                       focusedBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.cyan),
+                                        borderSide:
+                                            BorderSide(color: Colors.cyan),
                                       ),
                                     ),
                                     onChanged: (value) {
@@ -260,7 +344,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                       hintText: 'Confirm new password',
                                       hintStyle: TextStyle(color: Colors.grey),
                                       focusedBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.cyan),
+                                        borderSide:
+                                            BorderSide(color: Colors.cyan),
                                       ),
                                     ),
                                     onChanged: (value) {
@@ -278,53 +363,77 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    if (newPassword.length >= 6 && newPassword == confirmPassword) {
+                                    if (newPassword.length >= 6 &&
+                                        newPassword == confirmPassword) {
                                       try {
-                                        await currentUser.updatePassword(newPassword);
+                                        await currentUser
+                                            .updatePassword(newPassword);
                                         Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('Password changed successfully!'),
+                                            content: Text(
+                                                'Password changed successfully!'),
                                           ),
                                         );
                                       } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
                                             backgroundColor: Colors.red,
                                             content: Text(
                                               'Error: ${e.toString()}',
-                                              style: TextStyle(color: Colors.white),
+                                              style: TextStyle(
+                                                  color: Colors.white),
                                             ),
                                           ),
                                         );
                                       }
                                     } else if (newPassword != confirmPassword) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
                                           backgroundColor: Colors.red,
                                           content: Text(
                                             'Passwords do not match!',
-                                            style: TextStyle(color: Colors.white),
+                                            style:
+                                                TextStyle(color: Colors.white),
                                           ),
                                         ),
                                       );
                                     } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
                                           backgroundColor: Colors.red,
                                           content: Text(
                                             'Password must be at least 6 characters!',
-                                            style: TextStyle(color: Colors.white),
+                                            style:
+                                                TextStyle(color: Colors.white),
                                           ),
                                         ),
                                       );
                                     }
                                   },
-                                  child: Text('Save', style: TextStyle(color: Colors.white)),
+                                  child: Text('Save',
+                                      style: TextStyle(color: Colors.white)),
                                 ),
                               ],
                             ),
                           );
+                        },
+                      ),
+                      InkWell(
+                        child: Text(
+                          textAlign: TextAlign.left,
+                          'Change Phone Number',
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        onTap: () {
+                          editPhoneNumber();
                         },
                       ),
                       InkWell(

@@ -1,8 +1,10 @@
 import 'package:barberbud_rider_project/resources/constant.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 
 class HomePageBody extends StatefulWidget {
   const HomePageBody({super.key});
@@ -14,21 +16,51 @@ class HomePageBody extends StatefulWidget {
 class _HomePageBodyState extends State<HomePageBody> {
   List<Map<String, dynamic>> allOrders = [];
   bool isLoading = true;
+  final currentUser = FirebaseAuth.instance.currentUser!;
+  StreamSubscription<Position>? _positionStreamSubscription;
+  StreamSubscription<DocumentSnapshot>? _orderStatusSubscription;
+  String? phoneNumber;
 
   @override
   void initState() {
     super.initState();
     _checkLocationPermission();
+      _fetchPhoneNumber();
   }
 
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    _orderStatusSubscription?.cancel();
+    super.dispose();
+  }
 
-Future<void> _checkLocationPermission() async {
-  LocationPermission permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied ||
-      permission == LocationPermission.deniedForever) {
-    permission = await Geolocator.requestPermission();
+Future<void> _fetchPhoneNumber() async {
+  try {
+    DocumentSnapshot barberDoc = await FirebaseFirestore.instance
+        .collection('Barbers')
+        .doc(currentUser.email)
+        .get();
+
+    if (barberDoc.exists) {
+      setState(() {
+        phoneNumber = barberDoc.get('phoneNumber');
+      });
+    } else {
+      print('Barber document does not exist.');
+    }
+  } catch (e) {
+    print('Error fetching phone number: $e');
   }
 }
+
+  Future<void> _checkLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+    }
+  }
 
   // Function to launch Google Maps
   void _launchMaps(double latitude, double longitude) async {
@@ -44,6 +76,17 @@ Future<void> _checkLocationPermission() async {
   // Function to filter orders where orderTaken == "Not yet"
   List<Map<String, dynamic>> filterOrders(List<Map<String, dynamic>> orders) {
     return orders.where((order) => order['orderTaken'] == 'Not yet').toList();
+  }
+
+  // Function to make a phone call
+  // Phone number is pass at widget build 
+  void _makePhoneCall(String phoneNumber) async { 
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      throw 'Could not launch $phoneUri';
+    }
   }
 
   @override
@@ -76,10 +119,10 @@ Future<void> _checkLocationPermission() async {
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: filteredOrders.length,
-          itemBuilder: (context, index) {
+          itemBuilder: (context, index)  {
             final order = filteredOrders[index];
             double originalTotal =
-                double.tryParse(order['total']?.toString() ?? '0') ?? 0;
+            double.tryParse(order['total']?.toString() ?? '0') ?? 0;
             double deductedTotal = originalTotal;
             // only deduct on eWallet because barber need to collect full cash
             // and Barber Bud will deduct their percentage after order completed
@@ -87,10 +130,14 @@ Future<void> _checkLocationPermission() async {
               deductedTotal = originalTotal * 0.85; // 15% deduction for eWallet
             }
 
+            String userEmail = order['userEmail'] ?? 'N/A';
             String address = order['address'] ?? 'N/A';
             String userPhoneNumber = order['userPhoneNumber'] ?? 'N/A';
             double latitude = order['latitude'] ?? 0.0;
             double longitude = order['longitude'] ?? 0.0;
+
+      
+   
 
             return InkWell(
               child: Card(
@@ -140,9 +187,22 @@ Future<void> _checkLocationPermission() async {
                           Text(
                             'Total: RM ${deductedTotal.toStringAsFixed(2)}',
                             style: const TextStyle(
-                                fontSize: 24, color: Colors.green),
+                                fontSize: 20, color: Colors.green),
                           ),
                           const Spacer(),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: const CircleBorder(),
+                              padding: const EdgeInsets.all(
+                                  12), // Makes it nicely sized
+                            ),
+                            onPressed: () => _makePhoneCall(userPhoneNumber), // pass phone number to the function
+                            child: const Icon(Icons.phone,size: 25, color: Colors.white),
+                          ),
+                          SizedBox(
+                            width: 8,
+                          ),
                           Container(
                             alignment: Alignment.bottomRight,
                             child: ElevatedButton(
@@ -153,7 +213,7 @@ Future<void> _checkLocationPermission() async {
                                 ),
                               ),
                               onPressed: () => _launchMaps(latitude, longitude),
-                              child: const Icon(Icons.map, color: Colors.white),
+                              child: const Icon(Icons.map,size: 25, color: Colors.white),
                             ),
                           ),
                         ],
@@ -169,6 +229,7 @@ Future<void> _checkLocationPermission() async {
                     .doc(orderId);
 
                 await docRef.update({'orderTaken': 'Yes'});
+                await docRef.update({'status': 'Ongoing'});
 
                 Geolocator.getPositionStream(
                   locationSettings: const LocationSettings(
@@ -179,8 +240,40 @@ Future<void> _checkLocationPermission() async {
                   await docRef.update({
                     'barberLatitude': position.latitude,
                     'barberLongitude': position.longitude,
+                    'barberEmail': currentUser.email,
                     'lastUpdated': Timestamp.now(),
                   });
+                });
+
+                // Start location tracking
+                _positionStreamSubscription
+                    ?.cancel(); // Cancel if already running
+                _positionStreamSubscription = Geolocator.getPositionStream(
+                  locationSettings: const LocationSettings(
+                    accuracy: LocationAccuracy.high,
+                    distanceFilter: 10,
+                  ),
+                ).listen((Position position) async {
+                  await docRef.update({
+                    'barberLatitude': position.latitude,
+                    'barberLongitude': position.longitude,
+                    'barberEmail': currentUser.email,
+                    'barberNumber': phoneNumber,
+                    'lastUpdated': Timestamp.now(),
+                  });
+                });
+
+                // Listen for order status changes
+                _orderStatusSubscription?.cancel(); // Cancel previous if any
+                _orderStatusSubscription =
+                    docRef.snapshots().listen((docSnapshot) async {
+                  if (docSnapshot.exists) {
+                    final data = docSnapshot.data() as Map<String, dynamic>;
+                    if (data['status'] == 'Completed') {
+                      await _positionStreamSubscription?.cancel();
+                      await _orderStatusSubscription?.cancel();
+                    }
+                  }
                 });
               },
             );
