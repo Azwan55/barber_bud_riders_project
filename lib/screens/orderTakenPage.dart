@@ -43,14 +43,13 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('orders')
-            
             .where('barberEmail', isEqualTo: currentUser.email)
-            
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
-                child: CircularProgressIndicator(color: SecondaryColor));
+              child: CircularProgressIndicator(color: Colors.blueAccent),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -67,88 +66,167 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
             children: snapshot.data!.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
               double originalTotal =
-              double.tryParse(data['total']?.toString() ?? '0') ?? 0;
+                  double.tryParse(data['total']?.toString() ?? '0') ?? 0;
               double deductedTotal = originalTotal;
 
               String userPhoneNumber = data['userPhoneNumber'] ?? 'N/A';
-              // only deduct on eWallet because barber need to collect full cash
-              // and Barber Bud will deduct their percentage after order completed
-              if (data['paymentMethod'] == 'eWallet') {
+              String paymentMethod = data['paymentMethod'] ?? '';
+              String orderStatus = data['status'] ?? '';
+              if (paymentMethod == 'eWallet') {
                 deductedTotal =
                     originalTotal * 0.85; // 15% deduction for eWallet
               }
 
               double latitude = data['latitude'] ?? 0.0;
               double longitude = data['longitude'] ?? 0.0;
-              return Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                color: SecondaryColor.withOpacity(0.9),
-                margin: EdgeInsets.symmetric(vertical: 8),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Order ID: ${doc.id}",
-                          style: TextStyle(
-                              color: PrimaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                      SizedBox(height: 8),
-                      Text(
-                        'Items: ${(data['items'] as List<dynamic>).map((item) => '${item['name']} (x${item['qty']})').join(', ')}',
-                        style:
-                            const TextStyle(fontSize: 14, color: PrimaryColor),
-                      ),
-                      SizedBox(height: 8),
-                      Text("Address: ${data['address'] ?? 'N/A'}",
-                          style: TextStyle(color: PrimaryColor, fontSize: 14)),
-                      SizedBox(height: 8),
-                      Text(
-                          "Customer Number: ${data['userPhoneNumber'] ?? 'N/A'}",
-                          style: TextStyle(color: PrimaryColor, fontSize: 14)),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
+
+              return InkWell(
+                onLongPress: orderStatus == 'Completed'
+                    ? null
+                    : () async {
+                        try {
+                          final orderId = doc.id;
+
+                          // Update the order status to 'Completed'
+                          await FirebaseFirestore.instance
+                              .collection('orders')
+                              .doc(orderId)
+                              .update({'status': 'Completed'});
+
+                          // If payment method is eWallet, update barber's eWallet balance
+                          if (paymentMethod == 'eWallet') {
+                            final barberEwalletRef = FirebaseFirestore.instance
+                                .collection('Barbers')
+                                .doc(currentUser.email)
+                                .collection('ewallet');
+
+                            final ewalletDocs =
+                                await barberEwalletRef.limit(1).get();
+
+                            if (ewalletDocs.docs.isNotEmpty) {
+                              final ewalletDoc = ewalletDocs.docs.first;
+                              final currentBalance =
+                                  (ewalletDoc.data()['balance'] ?? 0)
+                                      .toDouble();
+                              final newBalance = currentBalance + deductedTotal;
+
+                              await barberEwalletRef.doc(ewalletDoc.id).update({
+                                'balance': newBalance,
+                              });
+                            } else {
+                              // No existing eWallet doc -> Create one
+                              await barberEwalletRef.add({
+                                'balance': deductedTotal,
+                              });
+                            }
+                          }
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Order completed and eWallet updated!')),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      },
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  color: SecondaryColor.withOpacity(0.9),
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Order ID: ${doc.id}",
+                            style: TextStyle(
+                                color: PrimaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                        SizedBox(height: 8),
+                        Text(
+                          'Items: ${(data['items'] as List<dynamic>).map((item) => '${item['name']} (x${item['qty']})').join(', ')}',
+                          style: const TextStyle(
+                              fontSize: 14, color: PrimaryColor),
+                        ),
+                        SizedBox(height: 8),
+                        Text("Address: ${data['address'] ?? 'N/A'}",
+                            style:
+                                TextStyle(color: PrimaryColor, fontSize: 14)),
+                        SizedBox(height: 8),
+                        Text("Customer Number: ${userPhoneNumber}",
+                            style:
+                                TextStyle(color: PrimaryColor, fontSize: 14)),
+                        SizedBox(height: 8),
+
+                        // ✅ Collect Cash Red Color if paymentMethod == Cash
+                        if (paymentMethod == 'Cash')
                           Text(
-                            'Total: RM ${deductedTotal.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                fontSize: 20, color: Colors.green),
-                          ),
-                          const Spacer(),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              shape: const CircleBorder(),
-                              padding: const EdgeInsets.all(
-                                  12), // Makes it nicely sized
+                            "Collect Cash from Customer",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
-                            onPressed: () => _makePhoneCall(
-                                userPhoneNumber), // pass phone number to the function
-                            child: const Icon(Icons.phone,
-                                size: 25, color: Colors.white),
                           ),
-                          SizedBox(
-                            width: 8,
-                          ),
-                          Container(
-                            alignment: Alignment.bottomRight,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+
+                        // ✅ Display "Order Completed" if orderStatus == Completed
+                        if (orderStatus == 'Completed')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              "Order Completed",
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
                               ),
-                              onPressed: () => _launchMaps(latitude, longitude),
-                              child: const Icon(Icons.map,
+                            ),
+                          ),
+
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              'Total: RM ${deductedTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                  fontSize: 20, color: Colors.green),
+                            ),
+                            const Spacer(),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: const CircleBorder(),
+                                padding: const EdgeInsets.all(12),
+                              ),
+                              onPressed: () => _makePhoneCall(userPhoneNumber),
+                              child: const Icon(Icons.phone,
                                   size: 25, color: Colors.white),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            SizedBox(width: 8),
+                            Container(
+                              alignment: Alignment.bottomRight,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () =>
+                                    _launchMaps(latitude, longitude),
+                                child: const Icon(Icons.map,
+                                    size: 25, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

@@ -16,7 +16,7 @@ class _MissionPageState extends State<MissionPage> {
     
       body: Center(
         child: Text(
-          'This is the mission page!',
+          'There is no mission yet',
           style: TextStyle(fontSize: 24),
         ),
       ),
