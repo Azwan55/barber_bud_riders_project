@@ -17,7 +17,7 @@ class _MissionPageState extends State<MissionPage> {
       body: Center(
         child: Text(
           'There is no mission yet',
-          style: TextStyle(fontSize: 24),
+          style: TextStyle(fontSize: 24,color: SecondaryColor),
         ),
       ),
     );

@@ -72,6 +72,8 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
               String userPhoneNumber = data['userPhoneNumber'] ?? 'N/A';
               String paymentMethod = data['paymentMethod'] ?? '';
               String orderStatus = data['status'] ?? '';
+              double barberBudPercentage =
+                  originalTotal * 0.15; // 15% deduction for Cash
               if (paymentMethod == 'eWallet') {
                 deductedTotal =
                     originalTotal * 0.85; // 15% deduction for eWallet
@@ -119,6 +121,59 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                                 'balance': deductedTotal,
                               });
                             }
+                              // Save transaction details to Firestore
+                            await FirebaseFirestore.instance
+                                .collection('Barbers')
+                                .doc(currentUser.email)
+                                .collection('transactions')
+                                .add({
+                              'amount': deductedTotal,
+                              'total': originalTotal,
+                              'orderId': orderId,
+                              'isDeduction': 'No',
+                              'timestamp': FieldValue.serverTimestamp(),
+                            });
+                          } else if (paymentMethod == 'Cash') {
+                            // Else for Cash Payment Method
+                            final barberEwalletRef = FirebaseFirestore.instance
+                                .collection('Barbers')
+                                .doc(currentUser.email)
+                                .collection('ewallet');
+
+                            final ewalletDocs =
+                                await barberEwalletRef.limit(1).get();
+
+                            if (ewalletDocs.docs.isNotEmpty) {
+                              final ewalletDoc = ewalletDocs.docs.first;
+                              final currentBalance =
+                                  (ewalletDoc.data()['balance'] ?? 0)
+                                      .toDouble();
+
+                              final newBalance =
+                                  currentBalance - barberBudPercentage;
+
+                              await barberEwalletRef.doc(ewalletDoc.id).update({
+                                'balance': newBalance,
+                              });
+                            } else {
+                              // No existing eWallet doc -> Create one
+                              await barberEwalletRef.add({
+                                'balance': deductedTotal,
+                              });
+                            }
+
+                            // Save transaction details to Firestore
+                            await FirebaseFirestore.instance
+                                .collection('Barbers')
+                                .doc(currentUser.email)
+                                .collection('transactions')
+                                .add({
+                              'amount': barberBudPercentage,
+                              'total': originalTotal,
+                              'orderId': orderId,
+                              'isDeduction': 'Yes',
+                              'timestamp': FieldValue.serverTimestamp(),
+                            });
                           }
 
                           ScaffoldMessenger.of(context).showSnackBar(
