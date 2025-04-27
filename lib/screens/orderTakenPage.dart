@@ -43,7 +43,9 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('orders')
+            
             .where('barberEmail', isEqualTo: currentUser.email)
+            
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
