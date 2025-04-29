@@ -27,8 +27,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     _checkLocationPermission();
     _fetchPhoneNumber();
 
-    // Start the location tracking as soon as the page is initialized
-    _startLocationTracking();
+  
   }
 
   @override
@@ -68,50 +67,10 @@ class _HomePageBodyState extends State<HomePageBody> {
     }
   }
 
-  // Function to start tracking the barber's location
-  Future<void> _startLocationTracking() async {
-    // Cancel any previous subscription if exists
-    _positionStreamSubscription?.cancel();
-
-    // Start the location stream and listen for updates
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10, // Updates location every 10 meters
-      ),
-    ).listen((Position position) async {
-      if (position != null) {
-        // Update the barber's location in Firestore
-        await FirebaseFirestore.instance
-            .collection('orders')
-            .doc('orderId')
-            .update({
-          'barberLatitude': position.latitude,
-          'barberLongitude': position.longitude,
-          'barberEmail': currentUser.email,
-          'barberNumber': phoneNumber,
-          'lastUpdated': Timestamp.now(),
-        });
-      }
-    });
-  }
+  
 
 
- // Function to start listening for the order status
-  void _startOrderStatusListener(String orderId) {
-    _orderStatusSubscription = FirebaseFirestore.instance
-        .collection('orders')
-        .doc(orderId)
-        .snapshots()
-        .listen((orderSnapshot) {
-      final orderStatus = orderSnapshot.data()?['status'] ?? '';
 
-      if (orderStatus == 'Completed') {
-        // Cancel location tracking when the status is "Completed"
-        _positionStreamSubscription?.cancel();
-      }
-    });
-  }
 
   // Function to launch Google Maps with the given latitude and longitude
   void _launchMaps(double latitude, double longitude) async {
@@ -299,9 +258,7 @@ Widget build(BuildContext context) {
               await docRef.update({'orderTaken': 'Yes'});
               await docRef.update({'status': 'Ongoing'});
 
-              _positionStreamSubscription?.cancel();
-              _startLocationTracking();
-              _startOrderStatusListener(orderId);
+            
             },
           );
         },

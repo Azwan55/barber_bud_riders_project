@@ -2,6 +2,7 @@ import 'package:barberbud_rider_project/resources/constant.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart'; // ✅ Add Geolocator import
 import 'package:url_launcher/url_launcher.dart';
 
 class OrderTakenPage extends StatefulWidget {
@@ -13,6 +14,59 @@ class OrderTakenPage extends StatefulWidget {
 
 class _OrderTakenPageState extends State<OrderTakenPage> {
   final currentUser = FirebaseAuth.instance.currentUser!;
+  Stream<Position>? positionStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _startLocationUpdates();
+  }
+
+  void _startLocationUpdates() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    positionStream = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // Only trigger if moved more than 10 meters
+      ),
+    );
+
+    positionStream!.listen((Position position) async {
+      final ongoingOrders = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('barberEmail', isEqualTo: currentUser.email)
+          .where('status', isEqualTo: 'Ongoing')
+          .get();
+
+      for (var doc in ongoingOrders.docs) {
+        await doc.reference.update({
+          'barberLatitude': position.latitude,
+          'barberLongitude': position.longitude,
+          'lastUpdated': Timestamp.now(),
+        });
+      }
+    });
+  }
 
   // Function to launch Google Maps
   void _launchMaps(double latitude, double longitude) async {
@@ -26,7 +80,6 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
   }
 
   // Function to make a phone call
-  // Phone number is pass at widget build
   void _makePhoneCall(String phoneNumber) async {
     final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
     if (await canLaunchUrl(phoneUri)) {
@@ -34,6 +87,12 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
     } else {
       throw 'Could not launch $phoneUri';
     }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    // Optionally: Cancel stream if needed
   }
 
   @override
@@ -72,11 +131,10 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
               String userPhoneNumber = data['userPhoneNumber'] ?? 'N/A';
               String paymentMethod = data['paymentMethod'] ?? '';
               String orderStatus = data['status'] ?? '';
-              double barberBudPercentage =
-                  originalTotal * 0.15; // 15% deduction for Cash
+              double barberBudPercentage = originalTotal * 0.15;
+
               if (paymentMethod == 'eWallet') {
-                deductedTotal =
-                    originalTotal * 0.85; // 15% deduction for eWallet
+                deductedTotal = originalTotal * 0.85;
               }
 
               double latitude = data['latitude'] ?? 0.0;
@@ -88,40 +146,34 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                     : () async {
                         try {
                           final orderId = doc.id;
-
-                          // Update the order status to 'Completed'
                           await FirebaseFirestore.instance
                               .collection('orders')
                               .doc(orderId)
                               .update({'status': 'Completed'});
 
-                          // If payment method is eWallet, update barber's eWallet balance
                           if (paymentMethod == 'eWallet') {
                             final barberEwalletRef = FirebaseFirestore.instance
                                 .collection('Barbers')
                                 .doc(currentUser.email)
                                 .collection('ewallet');
 
-                            final ewalletDocs =
-                                await barberEwalletRef.limit(1).get();
+                            final ewalletDocs = await barberEwalletRef.limit(1).get();
 
                             if (ewalletDocs.docs.isNotEmpty) {
                               final ewalletDoc = ewalletDocs.docs.first;
                               final currentBalance =
-                                  (ewalletDoc.data()['balance'] ?? 0)
-                                      .toDouble();
+                                  (ewalletDoc.data()['balance'] ?? 0).toDouble();
                               final newBalance = currentBalance + deductedTotal;
 
                               await barberEwalletRef.doc(ewalletDoc.id).update({
                                 'balance': newBalance,
                               });
                             } else {
-                              // No existing eWallet doc -> Create one
                               await barberEwalletRef.add({
                                 'balance': deductedTotal,
                               });
                             }
-                              // Save transaction details to Firestore
+
                             await FirebaseFirestore.instance
                                 .collection('Barbers')
                                 .doc(currentUser.email)
@@ -134,21 +186,17 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                               'timestamp': FieldValue.serverTimestamp(),
                             });
                           } else if (paymentMethod == 'Cash') {
-                            // Else for Cash Payment Method
                             final barberEwalletRef = FirebaseFirestore.instance
                                 .collection('Barbers')
                                 .doc(currentUser.email)
                                 .collection('ewallet');
 
-                            final ewalletDocs =
-                                await barberEwalletRef.limit(1).get();
+                            final ewalletDocs = await barberEwalletRef.limit(1).get();
 
                             if (ewalletDocs.docs.isNotEmpty) {
                               final ewalletDoc = ewalletDocs.docs.first;
                               final currentBalance =
-                                  (ewalletDoc.data()['balance'] ?? 0)
-                                      .toDouble();
-
+                                  (ewalletDoc.data()['balance'] ?? 0).toDouble();
                               final newBalance =
                                   currentBalance - barberBudPercentage;
 
@@ -156,13 +204,11 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                                 'balance': newBalance,
                               });
                             } else {
-                              // No existing eWallet doc -> Create one
                               await barberEwalletRef.add({
                                 'balance': deductedTotal,
                               });
                             }
 
-                            // Save transaction details to Firestore
                             await FirebaseFirestore.instance
                                 .collection('Barbers')
                                 .doc(currentUser.email)
@@ -178,6 +224,7 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
+                              backgroundColor: Colors.green,
                                 content: Text(
                                     'Order completed and eWallet updated!')),
                           );
@@ -205,20 +252,18 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                         SizedBox(height: 8),
                         Text(
                           'Items: ${(data['items'] as List<dynamic>).map((item) => '${item['name']} (x${item['qty']})').join(', ')}',
-                          style: const TextStyle(
-                              fontSize: 14, color: PrimaryColor),
+                          style:
+                              const TextStyle(fontSize: 14, color: PrimaryColor),
                         ),
                         SizedBox(height: 8),
                         Text("Address: ${data['address'] ?? 'N/A'}",
                             style:
                                 TextStyle(color: PrimaryColor, fontSize: 14)),
                         SizedBox(height: 8),
-                        Text("Customer Number: ${userPhoneNumber}",
+                        Text("Customer Number: $userPhoneNumber",
                             style:
                                 TextStyle(color: PrimaryColor, fontSize: 14)),
                         SizedBox(height: 8),
-
-                        // ✅ Collect Cash Red Color if paymentMethod == Cash
                         if (paymentMethod == 'Cash')
                           Text(
                             "Collect Cash from Customer",
@@ -228,8 +273,6 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                               fontSize: 16,
                             ),
                           ),
-
-                        // ✅ Display "Order Completed" if orderStatus == Completed
                         if (orderStatus == 'Completed')
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
@@ -242,7 +285,6 @@ class _OrderTakenPageState extends State<OrderTakenPage> {
                               ),
                             ),
                           ),
-
                         SizedBox(height: 8),
                         Row(
                           children: [
