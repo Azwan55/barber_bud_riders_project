@@ -318,7 +318,7 @@ class _EwalletPageState extends State<EwalletPage> {
                                         editField),
                                     _buildActionButton(
                                         Icons.call_received, 'Receive', () {
-                                      Navigator.pushNamed(context, 'qrcode');
+                                      Navigator.pushNamed(context, 'qrCode');
                                     }),
                                     _buildActionButton(Icons.qr_code, 'Scan',
                                         () {
@@ -350,24 +350,12 @@ class _EwalletPageState extends State<EwalletPage> {
                                   child: Row(
                                 children: [
                                   Text(
-                                    'Recent Transactions',
+                                    'Transactions',
                                     style: TextStyle(
                                         color: Colors.black, fontSize: 18),
                                   ),
-                                  Spacer(),
-                                  InkWell(
-                                      child: Text(
-                                        'View All',
-                                        style: TextStyle(
-                                            color: Colors.blueAccent,
-                                            decoration:
-                                                TextDecoration.underline,
-                                            decorationColor: Colors.blueAccent),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pushNamed(
-                                            context, 'transactionHistory');
-                                      })
+                              
+                              
                                 ],
                               )),
                               SizedBox(height: 10),
@@ -379,8 +367,7 @@ class _EwalletPageState extends State<EwalletPage> {
                                       .collection('transactions')
                                       .orderBy('timestamp',
                                           descending: true) // Sort by latest
-                                      .limit(
-                                          10) // Fetch more transactions to allow filtering
+                                      
                                       .snapshots(),
                                   builder: (context, transactionSnapshot) {
                                     if (transactionSnapshot.connectionState ==
@@ -439,7 +426,7 @@ class _EwalletPageState extends State<EwalletPage> {
                                                         ? "Cancel Refund"
                                                         : "Order ID: ${transactionData['orderId'] ?? 'N/A'}",
                                             style:
-                                                TextStyle(color: Colors.black),
+                                                TextStyle(color: Colors.black, fontSize: 14,),
                                           ),
                                           trailing: Text(
                                             transactionData['details'] ==
@@ -448,7 +435,14 @@ class _EwalletPageState extends State<EwalletPage> {
                                                 : transactionData['details'] ==
                                                         'cancel'
                                                     ? "+ RM ${transactionData['amount'].toString()}"
-                                                    : "- RM ${transactionData['amount'].toString()}",
+                                                    : (transactionData[
+                                                                    'orderId'] !=
+                                                                null &&
+                                                            transactionData[
+                                                                    'isDeduction'] ==
+                                                                'Yes')
+                                                        ? "- RM ${transactionData['amount'].toString()}"
+                                                        : "+ RM ${transactionData['amount'].toString()}",
                                             style: TextStyle(
                                               color: transactionData[
                                                           'details'] ==
@@ -459,7 +453,16 @@ class _EwalletPageState extends State<EwalletPage> {
                                                           'cancel'
                                                       ? Colors
                                                           .green // Change color to green for "Cancelled"
-                                                      : Colors.red,
+                                                      : (transactionData[
+                                                                      'orderId'] !=
+                                                                  null &&
+                                                              transactionData[
+                                                                      'isDeduction'] ==
+                                                                  'Yes')
+                                                          ? Colors
+                                                              .red // Red color for negative amounts with deduction
+                                                          : Colors
+                                                              .green, // Default to red for other cases
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
                                             ),

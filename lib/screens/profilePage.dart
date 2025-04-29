@@ -436,7 +436,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           editPhoneNumber();
                         },
                       ),
-                      InkWell(
+                     /* InkWell(
                         child: Text(
                           textAlign: TextAlign.left,
                           'About Barber Bud',
@@ -448,7 +448,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         onTap: () {
                           Navigator.pushNamed(context, 'aboutBarberBud');
                         },
-                      ),
+                      ),*/
                       Spacer(),
                       InkWell(
                         child: SizedBox(

@@ -1,3 +1,4 @@
+import 'package:barberbud_rider_project/screens/qrCodeScreen.dart';
 import 'package:barberbud_rider_project/screens/splashScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -15,6 +16,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routes: {
         "/": (context) => SplashScreenMain(),
+        "qrCode": (context) => QrCodeScreen(),
       },
     );
   }
