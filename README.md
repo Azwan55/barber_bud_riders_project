@@ -1,16 +1,25 @@
-# barberbud_rider_project
+# Barber Bud Riders - Barber Order Management App
 
-A new Flutter project.
+Barber Bud Riders is a companion app for barbers to manage incoming service requests from customers using the Barber Bud app.
 
-## Getting Started
+## Features
+- **Order Management**: View and Accept  orders.
+- **Customer Address Navigation**: Open customer location in Google Maps.
+- **Direct Call Function**: Call customer by launching customer phone number to default call app.
+- **E-Wallet for Barbers**: Track earnings and transactions.
+- **Mission Tracker**: Manage ongoing and completed orders.
+- **Profile Management**: Update barber details.
 
-This project is a starting point for a Flutter application.
+## Tech Stack
+- **Flutter**
+- **Firebase Authentication**
+- **Firebase Firestore**
 
-A few resources to get you started if this is your first Flutter project:
+## Installation
+1. Clone the repository.
+2. Run `flutter pub get`.
+3. Configure Firebase project.
+4. Run the app using Android Studio or VS Code.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## License
+This project is for educational purposes only.

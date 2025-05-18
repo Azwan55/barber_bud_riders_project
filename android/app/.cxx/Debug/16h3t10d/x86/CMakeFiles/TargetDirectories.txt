@@ -1,0 +1,2 @@
+C:/Users/user/barberbud_rider_project/android/app/.cxx/Debug/16h3t10d/x86/CMakeFiles/edit_cache.dir
+C:/Users/user/barberbud_rider_project/android/app/.cxx/Debug/16h3t10d/x86/CMakeFiles/rebuild_cache.dir

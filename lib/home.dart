@@ -77,17 +77,17 @@ class _HomePageState extends State<HomePage> {
         index: index,
         children: [
           showOrders
-              ? const HomePageBody()
+              ? const HomePageBody() //index 0
               : const Center(
                   child: Text(
                     'Start taking order now',
                     style: TextStyle(fontSize: 22, color: Colors.white),
                   ),
                 ),
-          OrderTakenPage(),
-          EwalletPage(),
-          MissionPage(),
-          ProfilePage(),
+          OrderTakenPage(),// index 1
+          EwalletPage(), // index 2
+          MissionPage(), // index 3
+          ProfilePage(), // index 4
         ],
       ),
 

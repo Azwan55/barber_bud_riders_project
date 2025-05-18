@@ -47,7 +47,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics'
 
     // Kotlin Standard Library (make sure this version matches with the one in the project-level build.gradle)
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.0" // or the Kotlin version you are using
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.0" // or the Kotlin version you are using
 
     // Other dependencies
 }
